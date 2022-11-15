@@ -1,0 +1,50 @@
+name: apply
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency: apply
+
+env:
+  TF_INPUT: false
+  TF_IN_AUTOMATION: true
+  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  MONGODB_ATLAS_PRIVATE_KEY: ${{ secrets.MONGODB_ATLAS_PRIVATE_KEY }}
+  MONGODB_ATLAS_PUBLIC_KEY: ${{ secrets.MONGODB_ATLAS_PUBLIC_KEY }}
+  NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
+  NEW_RELIC_REGION: ${{ secrets.NEW_RELIC_REGION }}
+  NEW_RELIC_ACCOUNT_ID: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1.3.2 # https://github.com/hashicorp/setup-terraform/releases
+        with:
+          terraform_version: 1.1.4 # https://github.com/hashicorp/terraform/releases
+          terraform_wrapper: false
+      - name: prep
+        shell: bash
+        run: |
+          echo "TF_VAR_git=$(echo ${GITHUB_REPOSITORY} | sed -e 's|.*/||')" >> $GITHUB_ENV
+
+          cat << EOF > auto.tf
+          variable "git" {}
+          EOF
+      - name: init
+        run: terraform init
+      - name: validate
+        run: terraform validate
+      - name: plan
+        run: terraform plan -out=tfplan
+      - name: apply
+        run: terraform apply -auto-approve tfplan
+      - name: check
+        run: terraform plan -detailed-exitcode
