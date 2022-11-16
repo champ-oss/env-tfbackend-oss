@@ -2,47 +2,41 @@ name: plan
 
 on:
   workflow_dispatch:
-  pull_request:
   push:
-    branches-ignore:
-      - main
 
 env:
-  TF_INPUT: false
-  TF_IN_AUTOMATION: true
-  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  AWS_REGION: us-east-2
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  MONGODB_ATLAS_PRIVATE_KEY: ${{ secrets.MONGODB_ATLAS_PRIVATE_KEY }}
-  MONGODB_ATLAS_PUBLIC_KEY: ${{ secrets.MONGODB_ATLAS_PUBLIC_KEY }}
-  NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
-  NEW_RELIC_REGION: ${{ secrets.NEW_RELIC_REGION }}
-  NEW_RELIC_ACCOUNT_ID: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
 
 jobs:
   plan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hashicorp/setup-terraform@v1.3.2 # https://github.com/hashicorp/setup-terraform/releases
         with:
           terraform_version: 1.1.4 # https://github.com/hashicorp/terraform/releases
           terraform_wrapper: false
-      - name: prep
-        shell: bash
+      - name: init
         run: |
           echo "TF_VAR_git=$(echo ${GITHUB_REPOSITORY} | sed -e 's|.*/||')" >> $GITHUB_ENV
+          terraform init
+      - name: import
+        run: |
+          terraform import module.this.aws_s3_bucket.logs ${TF_VAR_git}-logs || true
+          terraform import module.this.aws_s3_bucket_acl.logs ${TF_VAR_git}-logs,log-delivery-write || true
+          terraform import module.this.aws_s3_bucket_public_access_block.logs ${TF_VAR_git}-logs || true
+          terraform import module.this.aws_s3_bucket_server_side_encryption_configuration.logs ${TF_VAR_git}-logs || true
+          terraform import module.this.aws_s3_bucket_versioning.logs ${TF_VAR_git}-logs || true
 
-          cat << EOF > auto.tf
-          variable "git" {}
-          EOF
-      - name: init
-        run: terraform init
-      - name: validate
-        run: terraform validate
+          terraform import module.this.aws_s3_bucket.backend ${TF_VAR_git}-backend || true
+          terraform import module.this.aws_s3_bucket_acl.backend ${TF_VAR_git}-backend,private || true
+          terraform import module.this.aws_s3_bucket_public_access_block.backend ${TF_VAR_git}-backend || true
+          terraform import module.this.aws_s3_bucket_logging.backend ${TF_VAR_git}-backend || true
+          terraform import module.this.aws_s3_bucket_server_side_encryption_configuration.backend ${TF_VAR_git}-backend || true
+          terraform import module.this.aws_s3_bucket_versioning.backend ${TF_VAR_git}-backend || true
       - name: plan
         run: terraform plan
-      - uses: champ-oss/terraform-pr-summary@v1.0.0-87f10fc
-        if: github.event_name == 'pull_request'
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
