@@ -1,0 +1,25 @@
+name: update-lockfile
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 15 * *"
+
+env:
+  TF_INPUT: false
+  TF_IN_AUTOMATION: true
+
+jobs:
+  update-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ACTION_TOKEN }}
+      - uses: hashicorp/setup-terraform@v1.3.2
+        with:
+          terraform_version: 1.1.4
+          terraform_wrapper: false
+      - uses: champ-oss/update-terraform-lockfile@v1.0.31-7cac677
+        with:
+          token: ${{ secrets.ACTION_TOKEN }}
