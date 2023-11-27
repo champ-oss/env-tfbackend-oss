@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v1.3.2 # https://github.com/hashicorp/setup-terraform/releases
+      - uses: hashicorp/setup-terraform@v3.0.0 # https://github.com/hashicorp/setup-terraform/releases
         with:
           terraform_version: 1.1.4 # https://github.com/hashicorp/terraform/releases
           terraform_wrapper: false
