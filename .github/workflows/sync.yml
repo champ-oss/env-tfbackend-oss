@@ -24,4 +24,3 @@ jobs:
             .github/CODEOWNERS
             .github/dependabot.yml
             .github/workflows/lint.yml
-            examples/complete/.terraform.lock.hcl=.terraform.lock.hcl
